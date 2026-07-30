@@ -42,4 +42,5 @@ public class ManagedServer {
     public Instant getLastSeen() { return lastSeen; }
     public User getOwner() { return owner; }
     public String getTokenHash() { return tokenHash; }
+    public void markOnline(Instant seenAt, String reportedHostname) { this.status = ServerStatus.ONLINE; this.lastSeen = seenAt; if (reportedHostname != null && !reportedHostname.isBlank()) this.hostname = reportedHostname; }
 }

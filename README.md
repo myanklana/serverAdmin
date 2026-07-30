@@ -54,3 +54,7 @@ cd api
 
 A API ficará disponível em `http://localhost:8080`. Para confirmar que ela foi
 iniciada, acesse `http://localhost:8080/admin/status`.
+
+
+Para executar localmente, defina uma chave segura antes de iniciar a API:
+$env:APP_JWT_SECRET = "uma-chave-aleatoria-com-no-minimo-32-bytes"

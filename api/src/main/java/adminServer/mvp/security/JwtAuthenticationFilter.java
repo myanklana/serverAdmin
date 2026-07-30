@@ -3,10 +3,13 @@ package adminServer.mvp.security;
 import adminServer.mvp.auth.JwtService;
 import adminServer.mvp.user.User;
 import adminServer.mvp.user.UserRepository;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.NonNull;
+
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -20,7 +23,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final UserRepository users;
     public JwtAuthenticationFilter(JwtService jwtService, UserRepository users) { this.jwtService = jwtService; this.users = users; }
 
-    @Override protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+    @Override protected void doFilterInternal( @NonNull HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         String authorization = request.getHeader("Authorization");
         if (authorization != null && authorization.startsWith("Bearer ")) {
@@ -28,7 +31,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 User user = users.findById(jwtService.userId(authorization.substring(7))).orElseThrow();
                 SecurityContextHolder.getContext().setAuthentication(
                     new UsernamePasswordAuthenticationToken(new AuthenticatedUser(user.getId(), user.getUsername()), null, List.of()));
-            } catch (RuntimeException ignored) { }
+            } catch (RuntimeException e) {
+                throw new ServletException("Invalid JWT token", e);
+
+             }
         }
         chain.doFilter(request, response);
     }

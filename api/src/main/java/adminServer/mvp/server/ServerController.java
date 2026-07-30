@@ -19,6 +19,8 @@ import java.net.InetAddress;
 import java.security.MessageDigest;
 import java.nio.charset.StandardCharsets;
 import adminServer.mvp.security.AuthenticatedUser;
+import adminServer.mvp.metrics.Metric;
+import adminServer.mvp.metrics.MetricRepository;
 
 @RestController
 @RequestMapping("/api/servers")
@@ -26,13 +28,14 @@ public class ServerController {
     private final ManagedServerRepository servers;
     private final UserRepository users;
     private final PasswordEncoder passwordEncoder;
-    public ServerController(ManagedServerRepository servers, UserRepository users, PasswordEncoder passwordEncoder) {
-        this.servers = servers; this.users = users; this.passwordEncoder = passwordEncoder;
+    private final MetricRepository metrics;
+    public ServerController(ManagedServerRepository servers, UserRepository users, PasswordEncoder passwordEncoder, MetricRepository metrics) {
+        this.servers = servers; this.users = users; this.passwordEncoder = passwordEncoder; this.metrics = metrics;
     }
     @GetMapping
     public List<ServerResponse> list(Authentication authentication) {
         User user = currentUser(authentication);
-        return servers.findAllByOwnerIdOrderByNameAsc(user.getId()).stream().map(ServerResponse::from).toList();
+        return servers.findAllByOwnerIdOrderByNameAsc(user.getId()).stream().map(this::response).toList();
     }
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -42,11 +45,11 @@ public class ServerController {
         String token = request.token().trim();
         ManagedServer server = servers.save(new ManagedServer(request.name().trim(), request.hostnameOrIp(), ip,
                 request.port(), passwordEncoder.encode(token), tokenLookupHash(token), user));
-        return ServerResponse.from(server);
+        return response(server);
     }
     @GetMapping("/{id}")
     public ServerResponse get(@PathVariable UUID id, Authentication authentication) {
-        return ServerResponse.from(findOwned(id, authentication));
+        return response(findOwned(id, authentication));
     }
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -70,7 +73,13 @@ public class ServerController {
         try { return java.util.HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8))); }
         catch (Exception ex) { throw new IllegalStateException(ex); }
     }
-    public record ServerResponse(UUID id, String name, String hostname, String ip, int port, ServerStatus status, Instant lastSeen) {
-        static ServerResponse from(ManagedServer server) { return new ServerResponse(server.getId(), server.getName(), server.getHostname(), server.getIp(), server.getPort(), server.getStatus(), server.getLastSeen()); }
+    private ServerResponse response(ManagedServer server) {
+        Metric metric = metrics.findFirstByServerIdOrderByCollectedAtDesc(server.getId()).orElse(null);
+        ServerStatus status = server.getLastSeen() != null && server.getLastSeen().isBefore(Instant.now().minusSeconds(15)) ? ServerStatus.OFFLINE : server.getStatus();
+        return new ServerResponse(server.getId(), server.getName(), server.getHostname(), server.getIp(), server.getPort(), status, server.getLastSeen(), metric == null ? null : MetricResponse.from(metric));
+    }
+    public record ServerResponse(UUID id, String name, String hostname, String ip, int port, ServerStatus status, Instant lastSeen, MetricResponse latestMetrics) { }
+    public record MetricResponse(Instant collectedAt, double cpuPercent, long memoryUsedBytes, long memoryTotalBytes, long diskUsedBytes, long diskTotalBytes, String operatingSystem, String kernel, String architecture, long uptimeSeconds, long networkReceivedBytes, long networkSentBytes) {
+        static MetricResponse from(Metric metric) { return new MetricResponse(metric.getCollectedAt(), metric.getCpuPercent(), metric.getMemoryUsedBytes(), metric.getMemoryTotalBytes(), metric.getDiskUsedBytes(), metric.getDiskTotalBytes(), metric.getOperatingSystem(), metric.getKernel(), metric.getArchitecture(), metric.getUptimeSeconds(), metric.getNetworkReceivedBytes(), metric.getNetworkSentBytes()); }
     }
 }

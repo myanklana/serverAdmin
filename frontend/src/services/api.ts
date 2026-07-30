@@ -1,4 +1,5 @@
-export type Server = { id: string; name: string; hostname: string; ip: string; port: number; status: 'PENDING' | 'ONLINE' | 'OFFLINE'; lastSeen: string | null };
+export type Metrics = { collectedAt: string; cpuPercent: number; memoryUsedBytes: number; memoryTotalBytes: number; diskUsedBytes: number; diskTotalBytes: number; operatingSystem: string; kernel: string; architecture: string; uptimeSeconds: number; networkReceivedBytes: number; networkSentBytes: number };
+export type Server = { id: string; name: string; hostname: string; ip: string; port: number; status: 'PENDING' | 'ONLINE' | 'OFFLINE'; lastSeen: string | null; latestMetrics: Metrics | null };
 const baseUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:8080';
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`${baseUrl}${path}`, { ...init, headers: { 'Content-Type': 'application/json', ...init.headers } });
