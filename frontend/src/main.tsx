@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
+import { createRoot } from 'react-dom/client';
 import { createServer, listServers, login, register, Server } from './services/api';
 import './styles.css';
 
@@ -15,4 +16,7 @@ function App() {
   return <main><header><h1>Dashboard</h1><button onClick={() => { sessionStorage.removeItem('accessToken'); setToken(null); }}>Sair</button></header><section><h2>Novo servidor</h2><form className="server-form" onSubmit={submitServer}><label>Nome<input name="name" required /></label><label>IP<input name="ip" placeholder="192.168.1.10" required /></label><label>Token do agente<input name="agentToken" type="password" minLength={32} required /></label><label>Porta<input name="port" type="number" min="1" max="65535" defaultValue="8081" required /></label><button disabled={loading}>Cadastrar</button></form>{message && <p role="alert">{message}</p>}</section><section><h2>Monitoramento</h2>{servers.length === 0 ? <p>Nenhum servidor cadastrado.</p> : <div className="cards">{servers.map(server => <article className="card" key={server.id}><div><strong>{server.name}</strong><span className={`status ${server.status.toLowerCase()}`}>{server.status}</span></div><small>{server.hostname} · {server.ip}</small>{server.latestMetrics ? <><p>CPU <b>{server.latestMetrics.cpuPercent.toFixed(1)}%</b></p><p>RAM <b>{percentage(server.latestMetrics.memoryUsedBytes, server.latestMetrics.memoryTotalBytes)}%</b></p><p>Disco <b>{percentage(server.latestMetrics.diskUsedBytes, server.latestMetrics.diskTotalBytes)}%</b></p><small>{server.latestMetrics.operatingSystem} · {new Date(server.latestMetrics.collectedAt).toLocaleTimeString('pt-BR')}</small></> : <p>Aguardando dados do agente.</p>}</article>)}</div>}</section></main>;
 }
 function percentage(used: number, total: number) { return total === 0 ? '0.0' : ((used / total) * 100).toFixed(1); }
+
+createRoot(document.getElementById('root')!).render(<App />);
+
 export default App;

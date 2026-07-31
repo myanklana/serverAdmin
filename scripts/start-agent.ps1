@@ -14,6 +14,8 @@ if (-not (Test-Path $JarPath)) { throw "JAR do agente nao encontrado: $JarPath" 
 if ($ApiUrl -notmatch '^https?://') { throw 'ApiUrl deve iniciar com http:// ou https://.' }
 
 $configPath = Join-Path (Split-Path -Parent $JarPath) 'config.json'
-@{ server = $ApiUrl.TrimEnd('/'); token = $Token } | ConvertTo-Json | Set-Content -Path $configPath -Encoding utf8NoBOM
+$configJson = @{ server = $ApiUrl.TrimEnd('/'); token = $Token } | ConvertTo-Json
+$utf8WithoutBom = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText($configPath, $configJson, $utf8WithoutBom)
 Write-Host "Enviando metricas para $($ApiUrl.TrimEnd('/')) a cada 5 segundos. Use Ctrl+C para parar." -ForegroundColor Green
 & java -jar $JarPath $configPath
