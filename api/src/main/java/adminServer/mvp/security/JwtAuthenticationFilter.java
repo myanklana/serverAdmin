@@ -1,5 +1,6 @@
 package adminServer.mvp.security;
 
+import adminServer.mvp.auth.InvalidTokenException;
 import adminServer.mvp.auth.JwtService;
 import adminServer.mvp.user.User;
 import adminServer.mvp.user.UserRepository;
@@ -23,7 +24,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final UserRepository users;
     public JwtAuthenticationFilter(JwtService jwtService, UserRepository users) { this.jwtService = jwtService; this.users = users; }
 
-    @Override protected void doFilterInternal( @NonNull HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+    @Override protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain chain)
             throws ServletException, IOException {
         String authorization = request.getHeader("Authorization");
         if (authorization != null && authorization.startsWith("Bearer ")) {
@@ -31,7 +32,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 User user = users.findById(jwtService.userId(authorization.substring(7))).orElseThrow();
                 SecurityContextHolder.getContext().setAuthentication(
                     new UsernamePasswordAuthenticationToken(new AuthenticatedUser(user.getId(), user.getUsername()), null, List.of()));
-            } catch (RuntimeException e) {
+            } catch (InvalidTokenException e) {
                 throw new ServletException("Invalid JWT token", e);
 
              }
