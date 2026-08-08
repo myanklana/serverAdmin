@@ -36,9 +36,9 @@ class MetricRequestValidationTest {
         assertThat(validator.validate(request)).isEmpty();
     }
 
-    private MetricsController.MetricRequest request(
+    private MetricRequest request(
             long diskUsed, long diskTotal, long receivedRate, long sentRate) {
-        return new MetricsController.MetricRequest(
+        return new MetricRequest(
                 "server-01", Instant.parse("2026-08-08T12:00:00Z"), 10,
                 500, 1_000, diskUsed, diskTotal, "Linux", "6.1", "amd64",
                 100, 10_000, 5_000, receivedRate, sentRate);
