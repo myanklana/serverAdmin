@@ -2,84 +2,118 @@ package adminServer.mvp.metrics;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Comparator;
-import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import adminServer.mvp.server.ManagedServer;
 import adminServer.mvp.server.ManagedServerRepository;
-import adminServer.mvp.user.User;
 
 @Service
 public class MetricHistoryService {
+    private static final Duration MAX_HISTORY_PERIOD = Duration.ofDays(31);
+    private static final int MAX_PAGE_SIZE = 500;
 
-    @Autowired
-    ManagedServerRepository managedServerRepository;
+    private final ManagedServerRepository managedServerRepository;
+    private final MetricRepository metricRepository;
 
-    @Autowired
-    MetricRepository metricRepository;
+    public MetricHistoryService(ManagedServerRepository managedServerRepository, MetricRepository metricRepository) {
+        this.managedServerRepository = managedServerRepository;
+        this.metricRepository = metricRepository;
+    }
 
     @Transactional(readOnly = true)
-    public Page<Metric> getMetricHistoryForUser(User user, Instant from, Instant to) {
-        validateArguments(user, from, to);
-        List<ManagedServer> servers = verificaServidoresUsuario(user);
-        if (servers.isEmpty()) {
-            throw new IllegalArgumentException("User has no managed servers");
+    public Page<MetricHistoryResponse> getMetricHistoryForUser(
+            UUID userId, Instant from, Instant to, int page, int size) {
+        validateArguments(userId, from, to, page, size);
+
+        return metricRepository
+                .findByServerOwnerIdAndCollectedAtGreaterThanEqualAndCollectedAtLessThan(
+                        userId, from, to, pageRequest(page, size))
+                .map(MetricHistoryResponse::from);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<MetricHistoryResponse> getMetricHistoryForServer(
+            UUID userId, UUID serverId, Instant from, Instant to, int page, int size) {
+        validateArguments(userId, from, to, page, size);
+        if (serverId == null) {
+            throw new IllegalArgumentException("Server id cannot be null");
         }
-        return metricRepository.findByServerIdInAndCollectedAtBetween(
-                servers.stream().map(ManagedServer::getId).toList(), from, to, PageRequest.of(0, 10));
+
+        managedServerRepository.findByIdAndOwnerId(serverId, userId)
+                .orElseThrow(NoSuchElementException::new);
+
+        return metricRepository
+                .findByServerIdAndCollectedAtGreaterThanEqualAndCollectedAtLessThan(
+                        serverId, from, to, pageRequest(page, size))
+                .map(MetricHistoryResponse::from);
     }
 
-    @Transactional(readOnly = true)
-    public Page<Metric> getMetricHistoryForServer(User user, UUID serverId, Instant from, Instant to) {
-        validateArguments(user, from, to);
-        ManagedServer server = managedServerRepository.findByIdAndOwnerId(serverId, user.getId())
-                .orElseThrow(() -> new IllegalArgumentException("Server not found or not owned by user"));
-        return returnHistoricDate(server.getId(), from, to);
+    private PageRequest pageRequest(int page, int size) {
+        return PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "collectedAt"));
     }
 
-    private List<ManagedServer> verificaServidoresUsuario(User user) {
-        return managedServerRepository.findAllByOwnerIdOrderByNameAsc(user.getId());
-
-    }
-
-    private void validateArguments(User user, Instant from, Instant to) {
-        if (user == null) {
-            throw new IllegalArgumentException("User cannot be null");
+    private void validateArguments(UUID userId, Instant from, Instant to, int page, int size) {
+        if (userId == null) {
+            throw new IllegalArgumentException("User id cannot be null");
         }
         if (from == null || to == null) {
             throw new IllegalArgumentException("Time interval cannot be null");
         }
-        if (!isIntervalCorrect(from, to)) {
+        if (!from.isBefore(to)) {
             throw new IllegalArgumentException("Invalid time interval: 'from' must be before 'to'");
         }
-        if (!validatePeriod(from, to)) {
-            throw new IllegalArgumentException("Invalid time interval: 'from' and 'to' must be within 31 days");
+        if (Duration.between(from, to).compareTo(MAX_HISTORY_PERIOD) > 0) {
+            throw new IllegalArgumentException("Time interval cannot exceed 31 days");
         }
-        if (!isIntervalCorrect(from, to)) {
-            throw new IllegalArgumentException("Invalid time interval: 'from' must be before 'to'");
+        if (page < 0) {
+            throw new IllegalArgumentException("Page cannot be negative");
         }
-
+        if (size < 1 || size > MAX_PAGE_SIZE) {
+            throw new IllegalArgumentException("Page size must be between 1 and 500");
+        }
     }
 
-    private boolean validatePeriod(Instant from, Instant to) {
-        return from.plus(Duration.ofDays(31)).isBefore(to);
+    public record MetricHistoryResponse(
+            UUID serverId,
+            String serverName,
+            Instant collectedAt,
+            double cpuPercent,
+            long memoryUsedBytes,
+            long memoryTotalBytes,
+            long diskUsedBytes,
+            long diskTotalBytes,
+            String operatingSystem,
+            String kernel,
+            String architecture,
+            long uptimeSeconds,
+            long networkReceivedBytes,
+            long networkSentBytes,
+            long networkReceivedBytesPerSecond,
+            long networkSentBytesPerSecond) {
+        static MetricHistoryResponse from(Metric metric) {
+            return new MetricHistoryResponse(
+                    metric.getServer().getId(),
+                    metric.getServer().getName(),
+                    metric.getCollectedAt(),
+                    metric.getCpuPercent(),
+                    metric.getMemoryUsedBytes(),
+                    metric.getMemoryTotalBytes(),
+                    metric.getDiskUsedBytes(),
+                    metric.getDiskTotalBytes(),
+                    metric.getOperatingSystem(),
+                    metric.getKernel(),
+                    metric.getArchitecture(),
+                    metric.getUptimeSeconds(),
+                    metric.getNetworkReceivedBytes(),
+                    metric.getNetworkSentBytes(),
+                    metric.getNetworkReceivedBytesPerSecond(),
+                    metric.getNetworkSentBytesPerSecond());
+        }
     }
-
-    private boolean isIntervalCorrect(Instant from, Instant to) {
-        return from.isBefore(to);
-    }
-
-    private Page<Metric> returnHistoricDate(UUID serverId, Instant from, Instant to) {
-
-        return metricRepository.findByServerIdAndCollectedAtBetweenOrderByCollectedAtAsc(serverId, from, to,
-                PageRequest.of(0, 10));
-    }
-
 }

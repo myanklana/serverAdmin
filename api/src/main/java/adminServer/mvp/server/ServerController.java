@@ -79,7 +79,7 @@ public class ServerController {
         return new ServerResponse(server.getId(), server.getName(), server.getHostname(), server.getIp(), server.getPort(), status, server.getLastSeen(), metric == null ? null : MetricResponse.from(metric));
     }
     public record ServerResponse(UUID id, String name, String hostname, String ip, int port, ServerStatus status, Instant lastSeen, MetricResponse latestMetrics) { }
-    public record MetricResponse(Instant collectedAt, double cpuPercent, long memoryUsedBytes, long memoryTotalBytes, long diskUsedBytes, long diskTotalBytes, String operatingSystem, String kernel, String architecture, long uptimeSeconds, long networkReceivedBytes, long networkSentBytes) {
-        static MetricResponse from(Metric metric) { return new MetricResponse(metric.getCollectedAt(), metric.getCpuPercent(), metric.getMemoryUsedBytes(), metric.getMemoryTotalBytes(), metric.getDiskUsedBytes(), metric.getDiskTotalBytes(), metric.getOperatingSystem(), metric.getKernel(), metric.getArchitecture(), metric.getUptimeSeconds(), metric.getNetworkReceivedBytes(), metric.getNetworkSentBytes()); }
+    public record MetricResponse(Instant collectedAt, double cpuPercent, long memoryUsedBytes, long memoryTotalBytes, long diskUsedBytes, long diskTotalBytes, String operatingSystem, String kernel, String architecture, long uptimeSeconds, long networkReceivedBytes, long networkSentBytes, long networkReceivedBytesPerSecond, long networkSentBytesPerSecond) {
+        static MetricResponse from(Metric metric) { return new MetricResponse(metric.getCollectedAt(), metric.getCpuPercent(), metric.getMemoryUsedBytes(), metric.getMemoryTotalBytes(), metric.getDiskUsedBytes(), metric.getDiskTotalBytes(), metric.getOperatingSystem(), metric.getKernel(), metric.getArchitecture(), metric.getUptimeSeconds(), metric.getNetworkReceivedBytes(), metric.getNetworkSentBytes(), metric.getNetworkReceivedBytesPerSecond(), metric.getNetworkSentBytesPerSecond()); }
     }
 }
