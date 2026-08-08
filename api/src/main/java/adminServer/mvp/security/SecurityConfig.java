@@ -22,7 +22,8 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final RestAuthenticationEntryPoint authenticationEntryPoint;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, RestAuthenticationEntryPoint authenticationEntryPoint) {
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
+            RestAuthenticationEntryPoint authenticationEntryPoint) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.authenticationEntryPoint = authenticationEntryPoint;
     }
@@ -30,15 +31,16 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable())
-            .cors(Customizer.withDefaults())
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/actuator/health", "/register", "/login", "/api/agent/**", "/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
-                .anyRequest().authenticated()
-            )
-            .exceptionHandling(exceptions -> exceptions.authenticationEntryPoint(authenticationEntryPoint))
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .csrf(csrf -> csrf.disable())
+                .cors(Customizer.withDefaults())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/actuator/health", "/register", "/login", "/api/agent/**", "/swagger-ui/**",
+                                "/v3/api-docs/**", "/swagger-ui.html", "/ws", "/ws/**")
+                        .permitAll()
+                        .anyRequest().authenticated())
+                .exceptionHandling(exceptions -> exceptions.authenticationEntryPoint(authenticationEntryPoint))
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -46,7 +48,8 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource(@Value("${app.cors.allowed-origins}") String allowedOrigins) {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.stream(allowedOrigins.split(",")).map(String::trim).filter(value -> !value.isEmpty()).toList());
+        configuration.setAllowedOrigins(
+                Arrays.stream(allowedOrigins.split(",")).map(String::trim).filter(value -> !value.isEmpty()).toList());
         configuration.setAllowedMethods(List.of("GET", "POST", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

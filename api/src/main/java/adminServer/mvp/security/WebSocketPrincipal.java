@@ -1,4 +1,4 @@
-package adminServer.mvp.websocket;
+package adminServer.mvp.security;
 
 import java.security.Principal;
 import java.util.UUID;
