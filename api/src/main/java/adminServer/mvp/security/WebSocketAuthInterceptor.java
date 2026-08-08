@@ -24,18 +24,21 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
+        if (accessor == null) {
+            return message;
+        }
+        if (StompCommand.CONNECT.equals(accessor.getCommand())) {
+            authenticate(accessor);
+        }
         if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
             Principal user = accessor.getUser();
             if (user == null) {
                 throw new IllegalArgumentException("Usuário não autenticado");
             }
             String destination = accessor.getDestination();
-            if (!"user/queue/metrics".equals(destination)) {
+            if (!"/user/queue/metrics".equals(destination)) {
                 throw new IllegalArgumentException("Destino não permitido: " + destination);
             }
-        }
-        if (accessor != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
-            authenticate(accessor);
         }
         return message;
     }

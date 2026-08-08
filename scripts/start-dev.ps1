@@ -16,7 +16,18 @@ function Require-Command([string]$Name) {
 
 Require-Command docker
 Require-Command node
-Require-Command npm
+
+$nodeCommand = Get-Command node -ErrorAction Stop
+$nodeExecutable = $nodeCommand.Source
+$nodeDirectory = Split-Path -Parent $nodeExecutable
+$npmCandidates = @(
+    (Join-Path $nodeDirectory 'node_modules/npm/bin/npm-cli.js'),
+    (Join-Path $env:APPDATA 'npm/node_modules/npm/bin/npm-cli.js')
+)
+$npmCli = $npmCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+if (-not $npmCli) {
+    throw "O npm-cli.js nao foi encontrado. Reinstale o Node.js com o npm incluido. Locais verificados: $($npmCandidates -join ', ')."
+}
 
 if ([string]::IsNullOrWhiteSpace($JwtSecret)) {
     $randomBytes = New-Object byte[] 48
@@ -33,13 +44,13 @@ try {
 
     if (-not (Test-Path (Join-Path $root 'frontend/node_modules'))) {
         Push-Location (Join-Path $root 'frontend')
-        try { npm.cmd ci } finally { Pop-Location }
+        try { & $nodeExecutable $npmCli ci } finally { Pop-Location }
     }
 
     $apiCommand = "`$env:APP_JWT_SECRET='$JwtSecret'; `$env:APP_CORS_ALLOWED_ORIGINS='$FrontendUrl'; Set-Location '$root/api'; .\mvnw.cmd spring-boot:run"
     Start-Process powershell -ArgumentList '-NoExit', '-ExecutionPolicy', 'Bypass', '-Command', $apiCommand
 
-    $frontendCommand = "`$env:VITE_API_URL='$ApiUrl'; Set-Location '$root/frontend'; npm.cmd run dev -- --host 0.0.0.0"
+    $frontendCommand = "`$env:VITE_API_URL='$ApiUrl'; `$env:VITE_WS_URL='$($ApiUrl -replace '^http', 'ws')/ws'; Set-Location '$root/frontend'; & '$nodeExecutable' '$npmCli' run dev -- --host 0.0.0.0"
     Start-Process powershell -ArgumentList '-NoExit', '-ExecutionPolicy', 'Bypass', '-Command', $frontendCommand
 
     Write-Host "API: $ApiUrl" -ForegroundColor Green
