@@ -41,6 +41,29 @@ class AgentApplicationTest {
     }
 
     @Test
+    void nonPositiveElapsedTimeProducesZeroRates() {
+        var timestamp = Instant.parse("2026-08-08T12:00:00Z");
+        var previous = new AgentApplication.NetworkSample(100, 50, timestamp);
+
+        var rates = AgentApplication.calculateNetworkRates(previous, 200, 100, timestamp);
+
+        assertEquals(0, rates.receivedBytesPerSecond());
+        assertEquals(0, rates.sentBytesPerSecond());
+    }
+
+    @Test
+    void rateCalculationTruncatesFractionalBytesPerSecond() {
+        var previous = new AgentApplication.NetworkSample(
+                100, 50, Instant.parse("2026-08-08T12:00:00Z"));
+
+        var rates = AgentApplication.calculateNetworkRates(
+                previous, 101, 52, Instant.parse("2026-08-08T12:00:03Z"));
+
+        assertEquals(0, rates.receivedBytesPerSecond());
+        assertEquals(0, rates.sentBytesPerSecond());
+    }
+
+    @Test
     void diskUsageIsAlwaysWithinTotal() {
         assertEquals(600, AgentApplication.usedBytes(1_000, 400));
         assertEquals(1_000, AgentApplication.usedBytes(1_000, -1));
