@@ -16,6 +16,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
+import java.util.UUID;
 import java.util.List;
 
 @Component
@@ -29,12 +30,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String authorization = request.getHeader("Authorization");
         if (authorization != null && authorization.startsWith("Bearer ")) {
             try {
-                User user = users.findById(jwtService.userId(authorization.substring(7))).orElseThrow();
-                SecurityContextHolder.getContext().setAuthentication(
-                    new UsernamePasswordAuthenticationToken(new AuthenticatedUser(user.getId(), user.getUsername()), null, List.of()));
+                UUID userId = jwtService.userId(authorization.substring(7));
+                users.findById(userId).ifPresent(user -> SecurityContextHolder.getContext().setAuthentication(
+                        new UsernamePasswordAuthenticationToken(
+                                new AuthenticatedUser(user.getId(), user.getUsername()), null, List.of())));
             } catch (InvalidTokenException e) {
-                throw new ServletException("Invalid JWT token", e);
-
+                SecurityContextHolder.clearContext();
              }
         }
         chain.doFilter(request, response);
