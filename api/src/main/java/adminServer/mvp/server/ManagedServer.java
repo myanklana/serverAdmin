@@ -2,13 +2,11 @@ package adminServer.mvp.server;
 
 import adminServer.mvp.user.User;
 import jakarta.persistence.*;
-import lombok.Setter;
 
 import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Setter
 @Table(name = "servers", uniqueConstraints = @UniqueConstraint(name = "uk_server_owner_name", columnNames = {
         "owner_id", "name" }))
 public class ManagedServer {
@@ -84,6 +82,18 @@ public class ManagedServer {
 
     public String getTokenHash() {
         return tokenHash;
+    }
+
+    public void updateDetails(String name, String hostname, String ip, int port) {
+        this.name = name;
+        this.hostname = hostname;
+        this.ip = ip;
+        this.port = port;
+    }
+
+    public void replaceToken(String tokenHash, String tokenLookupHash) {
+        this.tokenHash = tokenHash;
+        this.tokenLookupHash = tokenLookupHash;
     }
 
     public void markOnline(Instant seenAt, String reportedHostname) {

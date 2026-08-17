@@ -1,13 +1,10 @@
 package adminServer.mvp.server;
 
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.HexFormat;
-
-import javax.crypto.SecretKey;
-
-import org.apache.commons.codec.digest.HmacUtils;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -15,8 +12,11 @@ import org.springframework.stereotype.Service;
 public class TokenService {
 
     private final SecureRandom random = new SecureRandom();
-    private PasswordEncoder passwordEncoder;
-    private SecretKey key;
+    private final PasswordEncoder passwordEncoder;
+
+    public TokenService(PasswordEncoder passwordEncoder) {
+        this.passwordEncoder = passwordEncoder;
+    }
 
     public String generateToken() {
         byte[] bytes = new byte[32];
@@ -29,11 +29,12 @@ public class TokenService {
     }
 
     public String keyHash(String rawToken) {
-        if (key == null) {
-            throw new IllegalStateException("Key not initialized");
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                    .digest(rawToken.getBytes(StandardCharsets.UTF_8)));
+        } catch (Exception ex) {
+            throw new IllegalStateException("Não foi possível calcular o índice do token", ex);
         }
-        return HexFormat.of()
-                .formatHex(HmacUtils.hmacSha256(key.getEncoded(), rawToken.getBytes(StandardCharsets.UTF_8)));
     }
 
 }

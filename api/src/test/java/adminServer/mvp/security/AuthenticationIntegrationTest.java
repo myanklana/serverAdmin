@@ -68,7 +68,8 @@ class AuthenticationIntegrationTest {
                 .andExpect(status().isCreated())
                 .andReturn();
 
-        String serverId = objectMapper.readTree(created.getResponse().getContentAsString()).get("id").asText();
+        String serverId = objectMapper.readTree(created.getResponse().getContentAsString())
+                .get("server").get("id").asText();
 
         mvc.perform(get("/api/servers/" + serverId)
                 .header("Authorization", "Bearer " + otherUserToken))
