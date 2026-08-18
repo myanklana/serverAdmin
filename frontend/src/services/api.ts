@@ -5,7 +5,9 @@ const HISTORY_PAGE_SIZE = 500;
 const MAX_HISTORY_PAGES = 25;
 const MAX_CHART_POINTS = 700;
 export type Server = { id: string; name: string; hostname: string; ip: string; port: number; status: 'PENDING' | 'ONLINE' | 'OFFLINE'; lastSeen: string | null; latestMetrics: Metrics | null };
+export type CreatedServer = { server: Server; agentToken: string };
 const baseUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:8080';
+export const apiUrl = baseUrl;
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`${baseUrl}${path}`, { ...init, headers: { 'Content-Type': 'application/json', ...init.headers } });
   if (!response.ok) { const body = await response.json().catch(() => null); throw new Error(body?.message ?? 'Erro na requisição.'); }
@@ -14,7 +16,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 export const register = (credentials: { username: string; password: string }) => request('/register', { method: 'POST', body: JSON.stringify(credentials) });
 export const login = (credentials: { username: string; password: string }) => request<{ accessToken: string }>('/login', { method: 'POST', body: JSON.stringify(credentials) });
 export const listServers = (token: string) => request<Server[]>('/api/servers', { headers: { Authorization: `Bearer ${token}` } });
-export const createServer = (token: string, server: { name: string; ip: string; token: string; port: number }) => request<Server>('/api/servers', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(server) });
+export const createServer = (token: string, server: { name: string; ip: string; port: number }) => request<CreatedServer>('/api/servers', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(server) });
 export async function getMetricHistory(token: string, serverId: string, from: Date, to: Date) {
   const loadPage = (page: number) => {
     const query = new URLSearchParams({ from: from.toISOString(), to: to.toISOString(), page: String(page), size: '500' });

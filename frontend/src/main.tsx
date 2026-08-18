@@ -2,7 +2,7 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useMetricStream } from './hooks/useMetricStream';
 import { MetricChart } from './components/MetricChart';
-import { createServer, getMetricHistory, HistoricalMetric, listServers, login, register, Server } from './services/api';
+import { apiUrl, createServer, getMetricHistory, HistoricalMetric, listServers, login, register, Server } from './services/api';
 import type { RealtimeMetric } from './types/RealTimeMetric';
 import './styles.css';
 
@@ -18,6 +18,7 @@ function App() {
   const [history, setHistory] = useState<HistoricalMetric[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState('');
+  const [agentSetup, setAgentSetup] = useState<{ serverName: string; token: string } | null>(null);
 
   useEffect(() => { serversRef.current = servers; }, [servers]);
   useEffect(() => {
@@ -113,10 +114,11 @@ function App() {
     const form = event.currentTarget;
     const data = new FormData(form);
     try {
-      await createServer(token, { name: String(data.get('name')), ip: String(data.get('ip')), token: String(data.get('agentToken')), port: Number(data.get('port')) });
+      const created = await createServer(token, { name: String(data.get('name')), ip: String(data.get('ip')), port: Number(data.get('port')) });
       form.reset();
       await refresh();
-      setMessage('Servidor cadastrado. Inicie o agente com o mesmo token.');
+      setAgentSetup({ serverName: created.server.name, token: created.agentToken });
+      setMessage('Servidor cadastrado. Copie um dos comandos abaixo para iniciar o agente.');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Falha ao cadastrar.');
     } finally { setLoading(false); }
@@ -143,11 +145,14 @@ function App() {
       <form className="server-form" onSubmit={submitServer}>
         <label>Nome<input name="name" required /></label>
         <label>IP<input name="ip" placeholder="192.168.1.10" required /></label>
-        <label>Token do agente<input name="agentToken" type="password" minLength={32} required /></label>
-        <label>Porta<input name="port" type="number" min="1" max="65535" defaultValue="8081" required /></label>
+        <details className="advanced-options">
+          <summary>Opções avançadas</summary>
+          <label>Porta<input name="port" type="number" min="1" max="65535" defaultValue="8081" required /></label>
+        </details>
         <button disabled={loading}>Cadastrar</button>
       </form>
       {message && <p role="alert">{message}</p>}
+      {agentSetup && <AgentSetup serverName={agentSetup.serverName} token={agentSetup.token} onDismiss={() => setAgentSetup(null)} />}
     </section>
     <section>
       <h2>Monitoramento</h2>
@@ -193,6 +198,28 @@ function percentage(used: number, total: number) { return total === 0 ? '0.0' : 
 function percentageValue(used: number, total: number) { return total === 0 ? 0 : (used / total) * 100; }
 function formatRate(bytesPerSecond: number) { if (bytesPerSecond < 1024) return `${bytesPerSecond} B/s`; if (bytesPerSecond < 1024 ** 2) return `${(bytesPerSecond / 1024).toFixed(1)} KB/s`; return `${(bytesPerSecond / 1024 ** 2).toFixed(1)} MB/s`; }
 function streamStatusLabel(status: ReturnType<typeof useMetricStream>) { return { disconnected: 'desconectado', connecting: 'conectando…', connected: 'conectado', error: 'com erro' }[status]; }
+
+function AgentSetup({ serverName, token, onDismiss }: { serverName: string; token: string; onDismiss: () => void }) {
+  const windowsCommand = `.\\start-agent.ps1 -ApiUrl "${apiUrl}" -Token "${token}"`;
+  const linuxCommand = `./start-agent.sh '${apiUrl}' '${token}'`;
+  const [copied, setCopied] = useState('');
+
+  async function copy(label: string, command: string) {
+    await navigator.clipboard.writeText(command);
+    setCopied(label);
+  }
+
+  return <aside className="agent-setup" aria-live="polite">
+    <div><h3>Conectar {serverName}</h3><button className="dismiss" type="button" onClick={onDismiss}>Fechar</button></div>
+    <p>Este token é exibido somente agora. Copie o comando adequado e execute-o na pasta que contém o agente.</p>
+    <label>Windows</label>
+    <div className="command"><code>{windowsCommand}</code><button type="button" onClick={() => void copy('Windows', windowsCommand)}>Copiar</button></div>
+    <label>Linux</label>
+    <div className="command"><code>{linuxCommand}</code><button type="button" onClick={() => void copy('Linux', linuxCommand)}>Copiar</button></div>
+    {copied && <small>Comando para {copied} copiado.</small>}
+    <p><small>Se perder o token, gere outro pela rotação de token; o valor atual não pode ser recuperado.</small></p>
+  </aside>;
+}
 
 createRoot(document.getElementById('root')!).render(<App />);
 

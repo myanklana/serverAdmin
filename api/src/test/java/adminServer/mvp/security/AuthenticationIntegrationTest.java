@@ -99,6 +99,30 @@ class AuthenticationIntegrationTest {
                 .andExpect(jsonPath("$[?(@.name == 'other-server-%s')]".formatted(suffix)).isEmpty());
     }
 
+    @Test
+    void creatingServerWithoutTokenGeneratesAndReturnsTokenOnce() throws Exception {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        String jwt = login("automatic-token-" + suffix);
+
+        MvcResult created = mvc.perform(post("/api/servers")
+                .header("Authorization", "Bearer " + jwt)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"name":"automatic-%s","ip":"192.168.10.20","port":8081}
+                        """.formatted(suffix)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.agentToken").isString())
+                .andReturn();
+
+        String agentToken = objectMapper.readTree(created.getResponse().getContentAsString())
+                .get("agentToken").asText();
+        org.junit.jupiter.api.Assertions.assertTrue(agentToken.length() >= 32);
+
+        mvc.perform(get("/api/servers").header("Authorization", "Bearer " + jwt))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].agentToken").doesNotExist());
+    }
+
     private String login(String username) throws Exception {
         String password = "password-123";
         mvc.perform(post("/register")

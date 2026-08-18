@@ -2,11 +2,25 @@
 
 Aplicação Java instalada em cada servidor monitorado. Ela coleta métricas, envia dados à API e recebe somente comandos autorizados.
 
-## Configuração
-
-Crie um arquivo `config.json` a partir de `config.example.json` antes de executar o agente.
-
 ## Executar
+
+O painel gera um token seguro e mostra o comando completo logo após o cadastro
+do servidor. Copie para esta pasta o JAR empacotado e o script do seu sistema e
+execute o comando apresentado. O script cria o `config.json` automaticamente.
+
+Windows:
+
+```powershell
+.\start-agent.ps1 -ApiUrl "https://api.seudominio.com" -Token "TOKEN_GERADO"
+```
+
+Linux:
+
+```bash
+./start-agent.sh https://api.seudominio.com TOKEN_GERADO
+```
+
+Para desenvolvimento manual do agente:
 
 ```bash
 mvn package
