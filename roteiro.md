@@ -1,5 +1,13 @@
 # Roteiro de desenvolvimento — Server Manager
 
+## Progresso atual
+
+- [x] Fases 0 a 7 — base do projeto, autenticação, servidores, agente, métricas, dashboard e atualização em tempo real
+- [x] Fase 8 — gráficos e histórico visual
+- [ ] Fases 9 a 21 — administração remota e recursos avançados
+
+O histórico de métricas é persistido, exposto pela API e apresentado no frontend em gráficos de CPU, RAM, disco e rede para 24 horas, 7 dias ou 30 dias.
+
 Este projeto deve evoluir como um produto real: ao final de cada fase, deve existir uma entrega funcional e utilizável. Assim, você constrói um MVP cedo e evita passar meses sem algo concreto para testar.
 
 ## Visão geral da arquitetura

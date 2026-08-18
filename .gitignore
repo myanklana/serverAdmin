@@ -36,3 +36,4 @@ frontend/dist/
 *.tsbuildinfo
 dist/
 config.json
+roteiro.md

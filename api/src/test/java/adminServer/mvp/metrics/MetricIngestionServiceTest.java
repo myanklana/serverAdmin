@@ -39,7 +39,6 @@ class MetricIngestionServiceTest {
 
     @BeforeEach
     void setUp() {
-        when(owner.getId()).thenReturn(UUID.randomUUID());
         server = new ManagedServer("Meu PC", "old-host", "127.0.0.1", 8081, "hash", "lookup", owner);
         service = new MetricIngestionService(serverRepository, metricRepository, eventPublisher,
                 Clock.fixed(NOW, ZoneOffset.UTC));
@@ -47,6 +46,7 @@ class MetricIngestionServiceTest {
 
     @Test
     void persistsMetricMarksServerOnlineAndPublishesEvent() {
+        when(owner.getId()).thenReturn(UUID.randomUUID());
         when(metricRepository.save(any(Metric.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         MetricRealTimeResponse response = service.ingest(server, validRequest("  MY-PC  ", null));
@@ -71,6 +71,7 @@ class MetricIngestionServiceTest {
 
     @Test
     void preservesAcceptedAgentTimestamp() {
+        when(owner.getId()).thenReturn(UUID.randomUUID());
         Instant collectedAt = NOW.minusSeconds(60);
         when(metricRepository.save(any(Metric.class))).thenAnswer(invocation -> invocation.getArgument(0));
 

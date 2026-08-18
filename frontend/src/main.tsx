@@ -1,7 +1,8 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useMetricStream } from './hooks/useMetricStream';
-import { createServer, listServers, login, register, Server } from './services/api';
+import { MetricChart } from './components/MetricChart';
+import { createServer, getMetricHistory, HistoricalMetric, listServers, login, register, Server } from './services/api';
 import type { RealtimeMetric } from './types/RealTimeMetric';
 import './styles.css';
 
@@ -12,8 +13,31 @@ function App() {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [selectedServerId, setSelectedServerId] = useState('');
+  const [periodDays, setPeriodDays] = useState(1);
+  const [history, setHistory] = useState<HistoricalMetric[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState('');
 
   useEffect(() => { serversRef.current = servers; }, [servers]);
+  useEffect(() => {
+    if (!selectedServerId && servers.length > 0) setSelectedServerId(servers[0].id);
+    if (selectedServerId && !servers.some(server => server.id === selectedServerId)) setSelectedServerId(servers[0]?.id ?? '');
+  }, [selectedServerId, servers]);
+
+  useEffect(() => {
+    if (!token || !selectedServerId) { setHistory([]); return; }
+    let active = true;
+    const to = new Date();
+    const from = new Date(to.getTime() - periodDays * 86_400_000);
+    setHistoryLoading(true);
+    setHistoryError('');
+    void getMetricHistory(token, selectedServerId, from, to)
+      .then(metrics => { if (active) setHistory(metrics); })
+      .catch(error => { if (active) setHistoryError(error instanceof Error ? error.message : 'Falha ao carregar o histórico.'); })
+      .finally(() => { if (active) setHistoryLoading(false); });
+    return () => { active = false; };
+  }, [periodDays, selectedServerId, token]);
 
   const logout = useCallback((reason?: string) => {
     sessionStorage.removeItem('accessToken');
@@ -47,7 +71,17 @@ function App() {
     setServers(current => current.map(server => server.id === metric.serverId
       ? { ...server, status: 'ONLINE', lastSeen: metric.collectedAt, latestMetrics: { ...server.latestMetrics!, ...metric } }
       : server));
-  }, [refresh]);
+    if (metric.serverId === selectedServerId) {
+      const historicalMetric: HistoricalMetric = {
+        ...currentServer.latestMetrics,
+        ...metric,
+        serverId: metric.serverId,
+        serverName: metric.serverName,
+      };
+      setHistory(current => [...current, historicalMetric].filter(item =>
+        new Date(item.collectedAt).getTime() >= Date.now() - periodDays * 86_400_000).slice(-700));
+    }
+  }, [periodDays, refresh, selectedServerId]);
 
   const streamStatus = useMetricStream(token, handleRealtimeMetric);
 
@@ -129,10 +163,34 @@ function App() {
         </> : <p>Aguardando dados do agente.</p>}
       </article>)}</div>}
     </section>
+    <section>
+      <div className="history-header">
+        <div><h2>Histórico de uso</h2><small>Os gráficos recebem novas amostras em tempo real.</small></div>
+        <div className="history-controls">
+          <label>Servidor<select value={selectedServerId} onChange={event => setSelectedServerId(event.target.value)} disabled={servers.length === 0}>
+            {servers.map(server => <option value={server.id} key={server.id}>{server.name}</option>)}
+          </select></label>
+          <label>Período<select value={periodDays} onChange={event => setPeriodDays(Number(event.target.value))}>
+            <option value={1}>24 horas</option><option value={7}>7 dias</option><option value={30}>30 dias</option>
+          </select></label>
+        </div>
+      </div>
+      {historyError && <p role="alert">{historyError}</p>}
+      {historyLoading ? <p>Carregando histórico…</p> : servers.length === 0 ? <p>Cadastre um servidor para visualizar o histórico.</p> : <div className="charts">
+        <MetricChart title="CPU" metrics={history} maximum={100} series={[{ label: 'Uso', unit: '%', color: '#1769e0', value: metric => metric.cpuPercent }]} />
+        <MetricChart title="Memória RAM" metrics={history} maximum={100} series={[{ label: 'Uso', unit: '%', color: '#7c3aed', value: metric => percentageValue(metric.memoryUsedBytes, metric.memoryTotalBytes) }]} />
+        <MetricChart title="Disco" metrics={history} maximum={100} series={[{ label: 'Uso', unit: '%', color: '#d97706', value: metric => percentageValue(metric.diskUsedBytes, metric.diskTotalBytes) }]} />
+        <MetricChart title="Rede" metrics={history} series={[
+          { label: 'Download', unit: 'B/s', color: '#07805b', value: metric => metric.networkReceivedBytesPerSecond },
+          { label: 'Upload', unit: 'B/s', color: '#c2415d', value: metric => metric.networkSentBytesPerSecond },
+        ]} />
+      </div>}
+    </section>
   </main>;
 }
 
 function percentage(used: number, total: number) { return total === 0 ? '0.0' : ((used / total) * 100).toFixed(1); }
+function percentageValue(used: number, total: number) { return total === 0 ? 0 : (used / total) * 100; }
 function formatRate(bytesPerSecond: number) { if (bytesPerSecond < 1024) return `${bytesPerSecond} B/s`; if (bytesPerSecond < 1024 ** 2) return `${(bytesPerSecond / 1024).toFixed(1)} KB/s`; return `${(bytesPerSecond / 1024 ** 2).toFixed(1)} MB/s`; }
 function streamStatusLabel(status: ReturnType<typeof useMetricStream>) { return { disconnected: 'desconectado', connecting: 'conectando…', connected: 'conectado', error: 'com erro' }[status]; }
 
