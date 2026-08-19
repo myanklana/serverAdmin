@@ -1,0 +1,2 @@
+ALTER TABLE app_users ADD COLUMN failed_login_attempts INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE app_users ADD COLUMN locked_until TIMESTAMP WITH TIME ZONE;

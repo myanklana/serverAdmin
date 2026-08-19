@@ -27,4 +27,5 @@ public class AdminController {
 
     public record VersionResponse(String applicationVersion, String javaVersion) {
     }
+
 }

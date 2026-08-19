@@ -1,4 +1,4 @@
 {
-  "server": "https://api.meusistema.com",
-  "token": "substitua-por-um-token-seguro"
+  "server": "http://localhost:8080",
+  "token": "3d83b93ec72f4e42a84919ce5c0433d5"
 }
