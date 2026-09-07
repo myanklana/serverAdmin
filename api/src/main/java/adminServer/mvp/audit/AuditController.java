@@ -1,0 +1,3 @@
+package adminServer.mvp.audit;
+import java.time.Instant; import java.util.*; import org.springframework.web.bind.annotation.*;
+@RestController @RequestMapping("/api/audit") public class AuditController {private final AuditService audit;public AuditController(AuditService a){audit=a;}@GetMapping public List<View> list(){return audit.list().stream().map(l->new View(l.getId(),l.getUsername(),l.getAction(),l.getServer()==null?null:l.getServer().getId(),l.getSourceIp(),l.getDetails(),l.getCreatedAt())).toList();}public record View(UUID id,String username,String action,UUID serverId,String sourceIp,String details,Instant createdAt){}}

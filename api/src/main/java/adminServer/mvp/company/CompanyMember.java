@@ -1,0 +1,3 @@
+package adminServer.mvp.company;
+import java.util.UUID;import adminServer.mvp.user.*;import jakarta.persistence.*;
+@Entity @Table(name="company_members") public class CompanyMember{@Id private UUID id;@ManyToOne(fetch=FetchType.LAZY)@JoinColumn(name="company_id")private Company company;@ManyToOne(fetch=FetchType.LAZY)@JoinColumn(name="user_id")private User user;@Enumerated(EnumType.STRING)private UserRole role;protected CompanyMember(){}public CompanyMember(Company c,User u,UserRole r){id=UUID.randomUUID();company=c;user=u;role=r;}public UUID getId(){return id;}public Company getCompany(){return company;}public User getUser(){return user;}public UserRole getRole(){return role;}}

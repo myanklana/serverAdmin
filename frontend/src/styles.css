@@ -12,3 +12,13 @@
 .command code { overflow-wrap:anywhere; color:#fff; }
 .command button { flex:none; padding:.45rem .7rem; }
 @media (max-width: 560px) { .command { align-items:stretch; flex-direction:column; } .command button { align-self:flex-start; } }
+.process-heading { display:flex; align-items:end; justify-content:space-between; gap:1rem; }
+.process-heading h2 { margin:0 0 .35rem; }
+.table-scroll { margin-top:1rem; overflow-x:auto; }
+table { width:100%; border-collapse:collapse; }
+th, td { padding:.7rem; border-bottom:1px solid #e5eaf2; text-align:left; white-space:nowrap; }
+th { color:#667085; font-size:.8rem; text-transform:uppercase; }
+td:nth-child(2) { max-width:300px; overflow:hidden; text-overflow:ellipsis; }
+button.danger { padding:.4rem .65rem; background:#b22121; }
+@media (max-width: 560px) { .process-heading { align-items:stretch; flex-direction:column; } }
+.tool-actions { display:flex; flex-wrap:wrap; gap:.6rem; margin:1rem 0; }.terminal-form{grid-template-columns:1fr auto;align-items:end}.terminal-output{max-height:360px;overflow:auto;padding:1rem;border-radius:6px;background:#101828;color:#d1e9ff;white-space:pre-wrap}

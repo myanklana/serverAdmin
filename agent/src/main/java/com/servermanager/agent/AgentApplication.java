@@ -11,9 +11,13 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.List;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.servermanager.agent.command.AgentApiClient;
+import com.servermanager.agent.command.CommandExecutor;
+import com.servermanager.agent.command.CommandPoller;
 
 import oshi.SystemInfo;
 import oshi.hardware.NetworkIF;
@@ -36,8 +40,10 @@ public final class AgentApplication {
 
         SystemInfo system = new SystemInfo();
         HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
-        var executor = Executors.newSingleThreadScheduledExecutor();
+        var executor = Executors.newScheduledThreadPool(2);
         executor.scheduleAtFixedRate(() -> send(client, config, system), 0, 5, TimeUnit.SECONDS);
+        executor.scheduleWithFixedDelay(new CommandPoller(new AgentApiClient(client, config.server(), config.token()),
+                new CommandExecutor(JSON, system, config)), 1, 2, TimeUnit.SECONDS);
         Runtime.getRuntime().addShutdownHook(new Thread(executor::shutdown));
     }
 
@@ -147,7 +153,9 @@ public final class AgentApplication {
         }
     }
 
-    public record Config(String server, String token) {
+    public record Config(String server, String token, Boolean terminalEnabled, List<String> allowedCommands,
+            List<String> allowedPaths) {
+        public boolean isTerminalEnabled() { return Boolean.TRUE.equals(terminalEnabled); }
     }
 
     public record MetricPayload(String hostname, Instant collectedAt, double cpuPercent, long memoryUsedBytes,

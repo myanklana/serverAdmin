@@ -4,7 +4,12 @@
 
 - [x] Fases 0 a 7 — base do projeto, autenticação, servidores, agente, métricas, dashboard e atualização em tempo real
 - [x] Fase 8 — gráficos e histórico visual
-- [ ] Fases 9 a 21 — administração remota e recursos avançados
+- [x] Fase 9 — listagem e encerramento protegido de processos
+- [x] Fases 10 a 11 — serviços Linux e Docker por comandos tipados
+- [x] Fases 12 a 15 — logs, terminal allowlisted e arquivos em raízes autorizadas
+- [x] Fases 16, 18 a 20 — alertas locais, papéis, auditoria e espaços de trabalho
+- [ ] Fase 21 — verificação de versão pronta; troca automática aguarda distribuição assinada
+- [x] Fase 17 — histórico de métricas (entregue junto com a fase 8)
 
 O histórico de métricas é persistido, exposto pela API e apresentado no frontend em gráficos de CPU, RAM, disco e rede para 24 horas, 7 dias ou 30 dias.
 
@@ -173,6 +178,8 @@ Adicione gráficos para:
 - Histórico de uso
 
 ## Fase 9 — Processos
+
+**Concluída.** O painel solicita a lista pela fila persistida de comandos; o agente coleta PID, nome, CPU, RAM e usuário via OSHI e devolve o resultado. O encerramento exige confirmação e bloqueia processos de sistema e o próprio agente.
 
 Use o OSHI para listar processos e mostrar:
 

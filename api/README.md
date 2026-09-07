@@ -12,7 +12,7 @@ config/     security/
 
 As migrações de banco de dados devem ser criadas em `src/main/resources/db/migration/`.
 
-## Fases 1 a 3: endpoints disponíveis
+## Endpoints disponíveis
 
 | Método | Rota | Autenticação |
 | --- | --- | --- |
@@ -23,5 +23,10 @@ As migrações de banco de dados devem ser criadas em `src/main/resources/db/mig
 | `POST` | `/api/servers` | Bearer JWT |
 | `GET` | `/api/servers/{id}` | Bearer JWT |
 | `DELETE` | `/api/servers/{id}` | Bearer JWT |
+| `POST` | `/api/servers/{id}/processes/refresh` | Bearer JWT |
+| `POST` | `/api/servers/{id}/processes/terminate` | Bearer JWT |
+| `GET` | `/api/servers/{id}/processes/commands/{commandId}` | Bearer JWT |
+| `POST` | `/api/agent/commands/claim` | X-Agent-Token |
+| `POST` | `/api/agent/commands/{commandId}/complete` | X-Agent-Token |
 
-O token de agente nunca é devolvido pela API: somente o hash BCrypt é persistido.
+O token do agente é devolvido uma única vez na criação ou rotação. Somente os hashes de verificação e busca são persistidos.

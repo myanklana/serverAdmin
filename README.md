@@ -2,6 +2,8 @@
 
 Plataforma para monitorar e administrar servidores por meio de uma API central, uma interface web e agentes instalados nas máquinas monitoradas.
 
+O projeto é self-hosted e funciona sem serviços externos obrigatórios. Operações privilegiadas são opt-in no agente, registradas em auditoria e isoladas por espaço de trabalho.
+
 ## Módulos
 
 | Diretório | Responsabilidade |

@@ -16,6 +16,9 @@ import java.util.Locale;
 
 import java.time.Instant;
 import jakarta.servlet.http.HttpServletRequest;
+import adminServer.mvp.company.*;
+import adminServer.mvp.user.UserRole;
+import org.springframework.transaction.annotation.Transactional;
 
 @RestController
 public class AuthController {
@@ -24,17 +27,22 @@ public class AuthController {
     private final JwtService jwtService;
     private final AuthService authService;
     private final AuthRateLimitService rateLimits;
+    private final CompanyRepository companies;
+    private final CompanyMemberRepository members;
 
     public AuthController(UserRepository users, PasswordEncoder passwordEncoder, JwtService jwtService,
-            AuthService authService, AuthRateLimitService rateLimits) {
+            AuthService authService, AuthRateLimitService rateLimits, CompanyRepository companies,
+            CompanyMemberRepository members) {
         this.users = users;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.authService = authService;
         this.rateLimits = rateLimits;
+        this.companies = companies; this.members = members;
     }
 
     @PostMapping("/register")
+    @Transactional
     public ResponseEntity<UserResponse> register(@Valid @RequestBody Credentials request, HttpServletRequest httpRequest) {
         rateLimits.consumeRegistrationAttempt(httpRequest.getRemoteAddr());
         String username = normalizeUsername(request.username());
@@ -42,6 +50,8 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.CONFLICT).build();
         }
         User user = users.save(new User(username, passwordEncoder.encode(request.password())));
+        Company company = companies.save(new Company(username, user));
+        members.save(new CompanyMember(company, user, UserRole.ADMIN));
         return ResponseEntity.status(HttpStatus.CREATED).body(UserResponse.from(user));
     }
 
@@ -70,9 +80,9 @@ public class AuthController {
     public record TokenResponse(String accessToken, String tokenType, Instant expiresAt) {
     }
 
-    public record UserResponse(java.util.UUID id, String username, Instant createdAt) {
+    public record UserResponse(java.util.UUID id, String username, Instant createdAt, adminServer.mvp.user.UserRole role) {
         static UserResponse from(User user) {
-            return new UserResponse(user.getId(), user.getUsername(), user.getCreatedAt());
+            return new UserResponse(user.getId(), user.getUsername(), user.getCreatedAt(), user.getRole());
         }
     }
 

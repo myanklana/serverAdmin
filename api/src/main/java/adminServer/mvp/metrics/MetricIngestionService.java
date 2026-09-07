@@ -7,10 +7,12 @@ import java.time.Instant;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import adminServer.mvp.mappers.MetricMapper;
 import adminServer.mvp.server.ManagedServer;
 import adminServer.mvp.server.ManagedServerRepository;
+import adminServer.mvp.alerts.AlertService;
 
 @Service
 public class MetricIngestionService {
@@ -22,13 +24,21 @@ public class MetricIngestionService {
     private final MetricRepository metricRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
+    private final AlertService alertService;
 
+    @Autowired
     public MetricIngestionService(ManagedServerRepository managedServerRepository, MetricRepository metricRepository,
-            ApplicationEventPublisher eventPublisher, Clock clock) {
+            ApplicationEventPublisher eventPublisher, Clock clock, AlertService alertService) {
         this.managedServerRepository = managedServerRepository;
         this.metricRepository = metricRepository;
         this.eventPublisher = eventPublisher;
         this.clock = clock;
+        this.alertService = alertService;
+    }
+
+    MetricIngestionService(ManagedServerRepository managedServerRepository, MetricRepository metricRepository,
+            ApplicationEventPublisher eventPublisher, Clock clock) {
+        this(managedServerRepository, metricRepository, eventPublisher, clock, null);
     }
 
     @Transactional
@@ -46,6 +56,7 @@ public class MetricIngestionService {
 
         Metric metric = MetricMapper.from(server, request, collectedAt);
         metric = metricRepository.save(metric);
+        if (alertService != null) alertService.evaluate(metric);
         MetricRealTimeEvent event = MetricRealTimeEvent.from(metric);
         eventPublisher.publishEvent(event);
         return MetricRealTimeResponse.from(event);

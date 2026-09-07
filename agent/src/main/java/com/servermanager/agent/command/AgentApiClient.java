@@ -24,8 +24,18 @@ public final class AgentApiClient {
     public AgentApiClient(HttpClient httpClient, String apiUrl, String token) {
         this.httpClient = httpClient;
         this.objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
-        this.cUri = URI.create(apiUrl.replaceAll("/$", "") + "/api/agent/command/claim");
+        this.cUri = URI.create(apiUrl.replaceAll("/$", "") + "/api/agent/commands/claim");
         this.token = token;
+    }
+
+    public void complete(AgentCommandResponse command, CommandResult result) throws IOException, InterruptedException {
+        URI uri = URI.create(cUri.toString().replace("/claim", "/" + command.id() + "/complete"));
+        String body = objectMapper.writeValueAsString(result);
+        HttpRequest request = HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(10))
+                .header("X-Agent-Token", token).header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(body)).build();
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() >= 300) throw new IOException("Falha ao concluir comando: HTTP " + response.statusCode());
     }
 
     public Optional<AgentCommandResponse> claimNext() throws IllegalAccessException, IOException, InterruptedException {

@@ -1,4 +1,7 @@
 {
   "server": "http://localhost:8080",
-  "token": "3d83b93ec72f4e42a84919ce5c0433d5"
+  "token": "3d83b93ec72f4e42a84919ce5c0433d5",
+  "terminalEnabled": false,
+  "allowedCommands": ["uptime", "df", "free"],
+  "allowedPaths": ["/etc/nginx", "/var/backups/server-manager"]
 }

@@ -31,6 +31,10 @@ public class User {
     @Column(name = "locked_until")
     private Instant lockedUntil;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private UserRole role = UserRole.ADMIN;
+
     protected User() {
     }
 
@@ -54,4 +58,6 @@ public class User {
     public Instant getCreatedAt() {
         return createdAt;
     }
+    public UserRole getRole() { return role; }
+    public void setRole(UserRole role) { this.role = role; }
 }

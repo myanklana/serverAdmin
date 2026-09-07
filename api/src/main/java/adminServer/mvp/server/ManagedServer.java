@@ -1,6 +1,7 @@
 package adminServer.mvp.server;
 
 import adminServer.mvp.user.User;
+import adminServer.mvp.company.Company;
 import jakarta.persistence.*;
 
 import java.time.Instant;
@@ -33,12 +34,19 @@ public class ManagedServer {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "company_id", nullable = false)
+    private Company company;
 
     protected ManagedServer() {
     }
 
     public ManagedServer(String name, String hostname, String ip, int port, String tokenHash, String tokenLookupHash,
             User owner) {
+        this(name, hostname, ip, port, tokenHash, tokenLookupHash, owner, null);
+    }
+    public ManagedServer(String name, String hostname, String ip, int port, String tokenHash, String tokenLookupHash,
+            User owner, Company company) {
         this.name = name;
         this.hostname = hostname;
         this.ip = ip;
@@ -46,6 +54,7 @@ public class ManagedServer {
         this.tokenHash = tokenHash;
         this.tokenLookupHash = tokenLookupHash;
         this.owner = owner;
+        this.company = company;
     }
 
     public UUID getId() {
@@ -79,6 +88,7 @@ public class ManagedServer {
     public User getOwner() {
         return owner;
     }
+    public Company getCompany() { return company; }
 
     public String getTokenHash() {
         return tokenHash;

@@ -1,5 +1,2 @@
 package com.servermanager.agent.process;
-
-public class ProcessInfo {
-
-}
+public record ProcessInfo(int pid, String name, double cpuPercent, long memoryBytes, String user) { }

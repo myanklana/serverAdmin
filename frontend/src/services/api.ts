@@ -6,6 +6,9 @@ const MAX_HISTORY_PAGES = 25;
 const MAX_CHART_POINTS = 700;
 export type Server = { id: string; name: string; hostname: string; ip: string; port: number; status: 'PENDING' | 'ONLINE' | 'OFFLINE'; lastSeen: string | null; latestMetrics: Metrics | null };
 export type CreatedServer = { server: Server; agentToken: string };
+export type ProcessInfo = { pid: number; name: string; cpuPercent: number; memoryBytes: number; user: string };
+export type AgentCommand = { id: string; type: 'LIST_PROCESSES' | 'TERMINATE_PROCESS'; status: 'PENDING' | 'CLAIMED' | 'SUCCEEDED' | 'FAILED' | 'REJECTED' | 'TIMED_OUT'; createdAt: string; completedAt: string | null; result: string | null; errorMessage: string | null };
+export type OperationType = 'LIST_SERVICES'|'CONTROL_SERVICE'|'LIST_CONTAINERS'|'CONTROL_CONTAINER'|'CONTAINER_LOGS'|'SYSTEM_LOGS'|'RUN_TERMINAL_COMMAND'|'WRITE_FILE'|'READ_FILE'|'CHECK_UPDATE';
 const baseUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:8080';
 export const apiUrl = baseUrl;
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -17,6 +20,11 @@ export const register = (credentials: { username: string; password: string }) =>
 export const login = (credentials: { username: string; password: string }) => request<{ accessToken: string }>('/login', { method: 'POST', body: JSON.stringify(credentials) });
 export const listServers = (token: string) => request<Server[]>('/api/servers', { headers: { Authorization: `Bearer ${token}` } });
 export const createServer = (token: string, server: { name: string; ip: string; port: number }) => request<CreatedServer>('/api/servers', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(server) });
+export const refreshProcesses = (token: string, serverId: string) => request<AgentCommand>(`/api/servers/${serverId}/processes/refresh`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+export const terminateProcess = (token: string, serverId: string, pid: number) => request<AgentCommand>(`/api/servers/${serverId}/processes/terminate`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify({ pid }) });
+export const getProcessCommand = (token: string, serverId: string, commandId: string) => request<AgentCommand>(`/api/servers/${serverId}/processes/commands/${commandId}`, { headers: { Authorization: `Bearer ${token}` } });
+export const requestOperation = (token:string,serverId:string,type:OperationType,payload:Record<string,string>={}) => request<AgentCommand>(`/api/servers/${serverId}/operations`,{method:'POST',headers:{Authorization:`Bearer ${token}`},body:JSON.stringify({type,payload})});
+export const getOperation = (token:string,serverId:string,id:string) => request<AgentCommand>(`/api/servers/${serverId}/operations/${id}`,{headers:{Authorization:`Bearer ${token}`}});
 export async function getMetricHistory(token: string, serverId: string, from: Date, to: Date) {
   const loadPage = (page: number) => {
     const query = new URLSearchParams({ from: from.toISOString(), to: to.toISOString(), page: String(page), size: '500' });

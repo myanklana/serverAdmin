@@ -27,4 +27,8 @@ mvn package
 java -jar target/agent-0.0.1-SNAPSHOT.jar config.json
 ```
 
-O agente envia métricas para a API a cada cinco segundos usando o token associado ao servidor.
+O agente envia métricas para a API a cada cinco segundos e consulta comandos a cada dois segundos usando o token associado ao servidor. PIDs de sistema e o próprio agente são protegidos.
+
+## Administração remota segura
+
+O agente também aceita operações tipadas para `systemctl`, Docker, `journalctl` e arquivos. A saída é limitada, toda operação tem timeout e arquivos ficam limitados a 1 MiB e às raízes de `allowedPaths`. O terminal é desativado por padrão; quando necessário, habilite `terminalEnabled` e informe executáveis exatos em `allowedCommands`. Não são interpretados pipes, redirecionamentos ou expansões de shell.

@@ -2,7 +2,7 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useMetricStream } from './hooks/useMetricStream';
 import { MetricChart } from './components/MetricChart';
-import { apiUrl, createServer, getMetricHistory, HistoricalMetric, listServers, login, register, Server } from './services/api';
+import { apiUrl, createServer, getMetricHistory, getOperation, getProcessCommand, HistoricalMetric, listServers, login, OperationType, ProcessInfo, refreshProcesses, register, requestOperation, Server, terminateProcess } from './services/api';
 import type { RealtimeMetric } from './types/RealTimeMetric';
 import './styles.css';
 
@@ -19,6 +19,11 @@ function App() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState('');
   const [agentSetup, setAgentSetup] = useState<{ serverName: string; token: string } | null>(null);
+  const [processes, setProcesses] = useState<ProcessInfo[]>([]);
+  const [processLoading, setProcessLoading] = useState(false);
+  const [processError, setProcessError] = useState('');
+  const [remoteOutput, setRemoteOutput] = useState('');
+  const [remoteLoading, setRemoteLoading] = useState(false);
 
   useEffect(() => { serversRef.current = servers; }, [servers]);
   useEffect(() => {
@@ -124,6 +129,42 @@ function App() {
     } finally { setLoading(false); }
   }
 
+  async function waitForCommand(commandId: string) {
+    if (!token || !selectedServerId) throw new Error('Selecione um servidor.');
+    for (let attempt = 0; attempt < 24; attempt++) {
+      const command = await getProcessCommand(token, selectedServerId, commandId);
+      if (command.status === 'SUCCEEDED') return command.result;
+      if (['FAILED', 'REJECTED', 'TIMED_OUT'].includes(command.status)) throw new Error(command.errorMessage ?? 'O agente não concluiu a operação.');
+      await new Promise(resolve => window.setTimeout(resolve, 1000));
+    }
+    throw new Error('O agente demorou demais para responder.');
+  }
+
+  async function loadProcesses() {
+    if (!token || !selectedServerId) return;
+    setProcessLoading(true); setProcessError('');
+    try {
+      const command = await refreshProcesses(token, selectedServerId);
+      const result = await waitForCommand(command.id);
+      setProcesses(result ? JSON.parse(result) as ProcessInfo[] : []);
+    } catch (error) { setProcessError(error instanceof Error ? error.message : 'Falha ao listar processos.'); }
+    finally { setProcessLoading(false); }
+  }
+
+  async function killProcess(pid: number, name: string) {
+    if (!token || !selectedServerId || !window.confirm(`Encerrar ${name} (PID ${pid})?`)) return;
+    setProcessLoading(true); setProcessError('');
+    try { const command = await terminateProcess(token, selectedServerId, pid); await waitForCommand(command.id); await loadProcesses(); }
+    catch (error) { setProcessError(error instanceof Error ? error.message : 'Falha ao encerrar processo.'); setProcessLoading(false); }
+  }
+  async function remote(type: OperationType, payload: Record<string,string> = {}) {
+    if (!token || !selectedServerId) return; setRemoteLoading(true); setRemoteOutput('');
+    try { const created = await requestOperation(token, selectedServerId, type, payload);
+      for (let i=0;i<45;i++) { const command=await getOperation(token,selectedServerId,created.id); if(command.status==='SUCCEEDED'){setRemoteOutput(command.result??'Concluído.');return;} if(['FAILED','REJECTED','TIMED_OUT'].includes(command.status)) throw new Error(command.errorMessage??'Operação falhou.'); await new Promise(r=>window.setTimeout(r,1000)); }
+      throw new Error('Tempo limite excedido.');
+    } catch(e){setRemoteOutput(e instanceof Error?e.message:'Falha na operação.');} finally{setRemoteLoading(false);}
+  }
+
   if (!token) return <main className="auth">
     <h1>Server Manager</h1>
     <form onSubmit={authenticate}>
@@ -191,12 +232,24 @@ function App() {
         ]} />
       </div>}
     </section>
+    <section>
+      <div className="process-heading"><div><h2>Processos</h2><small>Lista coletada sob demanda pelo agente selecionado.</small></div><button disabled={!selectedServerId || processLoading} onClick={() => void loadProcesses()}>{processLoading ? 'Aguardando agente…' : 'Atualizar processos'}</button></div>
+      {processError && <p role="alert">{processError}</p>}
+      {processes.length > 0 && <div className="table-scroll"><table><thead><tr><th>PID</th><th>Processo</th><th>Usuário</th><th>CPU</th><th>RAM</th><th></th></tr></thead><tbody>
+        {processes.map(process => <tr key={process.pid}><td>{process.pid}</td><td>{process.name}</td><td>{process.user || '—'}</td><td>{process.cpuPercent.toFixed(1)}%</td><td>{formatBytes(process.memoryBytes)}</td><td><button className="danger" disabled={processLoading} onClick={() => void killProcess(process.pid, process.name)}>Encerrar</button></td></tr>)}
+      </tbody></table></div>}
+      {!processLoading && processes.length === 0 && <p>Atualize para consultar os processos em execução.</p>}
+    </section>
+    <RemoteTools disabled={!selectedServerId||remoteLoading} output={remoteOutput} run={remote}/>
   </main>;
 }
+
+function RemoteTools({disabled,output,run}:{disabled:boolean;output:string;run:(type:OperationType,payload?:Record<string,string>)=>Promise<void>}) { const [value,setValue]=useState(''); return <section><h2>Administração remota</h2><div className="tool-actions"><button disabled={disabled} onClick={()=>void run('LIST_SERVICES')}>Serviços</button><button disabled={disabled} onClick={()=>void run('LIST_CONTAINERS')}>Containers</button><button disabled={disabled} onClick={()=>void run('SYSTEM_LOGS',{lines:'300'})}>Logs</button><button disabled={disabled} onClick={()=>void run('CHECK_UPDATE')}>Versão</button></div><form className="terminal-form" onSubmit={e=>{e.preventDefault();void run('RUN_TERMINAL_COMMAND',{command:value});}}><label>Comando permitido<input value={value} onChange={e=>setValue(e.target.value)} placeholder="uptime" required/></label><button disabled={disabled}>Executar</button></form>{output&&<pre className="terminal-output">{output}</pre>}<small>O terminal e os arquivos dependem das permissões explícitas do agente.</small></section>; }
 
 function percentage(used: number, total: number) { return total === 0 ? '0.0' : ((used / total) * 100).toFixed(1); }
 function percentageValue(used: number, total: number) { return total === 0 ? 0 : (used / total) * 100; }
 function formatRate(bytesPerSecond: number) { if (bytesPerSecond < 1024) return `${bytesPerSecond} B/s`; if (bytesPerSecond < 1024 ** 2) return `${(bytesPerSecond / 1024).toFixed(1)} KB/s`; return `${(bytesPerSecond / 1024 ** 2).toFixed(1)} MB/s`; }
+function formatBytes(bytes: number) { if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KB`; if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MB`; return `${(bytes / 1024 ** 3).toFixed(1)} GB`; }
 function streamStatusLabel(status: ReturnType<typeof useMetricStream>) { return { disconnected: 'desconectado', connecting: 'conectando…', connected: 'conectado', error: 'com erro' }[status]; }
 
 function AgentSetup({ serverName, token, onDismiss }: { serverName: string; token: string; onDismiss: () => void }) {

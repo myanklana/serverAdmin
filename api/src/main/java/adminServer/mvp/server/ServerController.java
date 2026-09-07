@@ -122,7 +122,8 @@ public class ServerController {
             @Size(max = 255) String hostname,
             @NotBlank @Pattern(regexp = "^[0-9a-fA-F:.]+$", message = "deve ser um endereço IPv4 ou IPv6") String ip,
             @Min(1) @Max(65535) int port,
-            @Size(min = 32, max = 512) String token) {
+            @Size(min = 32, max = 512) String token,
+            UUID companyId) {
         String hostnameOrIp() {
             return hostname == null || hostname.isBlank() ? ip.trim() : hostname.trim();
         }

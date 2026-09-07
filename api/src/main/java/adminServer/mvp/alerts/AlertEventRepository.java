@@ -1,0 +1,3 @@
+package adminServer.mvp.alerts;
+import java.util.*; import org.springframework.data.domain.Pageable; import org.springframework.data.jpa.repository.*;
+public interface AlertEventRepository extends JpaRepository<AlertEvent,UUID>{@Query("select e from AlertEvent e join CompanyMember m on m.company=e.server.company where m.user.id=:ownerId order by e.createdAt desc")List<AlertEvent> findAccessible(UUID ownerId,Pageable pageable);@Query("select e from AlertEvent e join CompanyMember m on m.company=e.server.company where e.id=:id and m.user.id=:ownerId")Optional<AlertEvent> findAccessible(UUID id,UUID ownerId);}

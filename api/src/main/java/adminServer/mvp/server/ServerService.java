@@ -13,6 +13,7 @@ import adminServer.mvp.server.dto.ServerResponse;
 import adminServer.mvp.server.dto.TokenRotationResponse;
 import adminServer.mvp.user.User;
 import jakarta.transaction.Transactional;
+import adminServer.mvp.company.CompanyRepository;
 
 @Service
 public class ServerService {
@@ -20,12 +21,14 @@ public class ServerService {
     private final TokenService tokenService;
     private final ManagedServerRepository serverRepository;
     private final MetricRepository metricRepository;
+    private final CompanyRepository companies;
 
     public ServerService(TokenService tokenService, ManagedServerRepository serverRepository,
-            MetricRepository metricRepository) {
+            MetricRepository metricRepository, CompanyRepository companies) {
         this.tokenService = tokenService;
         this.serverRepository = serverRepository;
         this.metricRepository = metricRepository;
+        this.companies = companies;
     }
 
     @Transactional
@@ -45,7 +48,9 @@ public class ServerService {
                 req.port(),
                 passwordHash,
                 keyHash,
-                user);
+                user, companies.findAccessible(user.getId()).stream()
+                        .filter(company -> req.companyId() == null || company.getId().equals(req.companyId()))
+                        .findFirst().orElseThrow());
 
         serverRepository.save(server);
 

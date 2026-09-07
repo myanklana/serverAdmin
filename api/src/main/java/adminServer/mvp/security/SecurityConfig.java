@@ -38,6 +38,9 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health", "/register", "/login", "/api/agent/**", "/swagger-ui/**",
                                 "/v3/api-docs/**", "/swagger-ui.html", "/ws", "/ws/**")
                         .permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/**").hasRole("ADMIN")
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/servers/*/processes/terminate", "/api/servers/*/operations").hasAnyRole("ADMIN", "OPERATOR")
+                        .requestMatchers("/api/users/**", "/api/audit/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .exceptionHandling(exceptions -> exceptions.authenticationEntryPoint(authenticationEntryPoint))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
