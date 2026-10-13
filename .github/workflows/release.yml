@@ -16,7 +16,7 @@ jobs:
         with: { distribution: temurin, java-version: 21, cache: maven }
       - name: Build agent
         run: ./scripts/package-agent.sh
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
