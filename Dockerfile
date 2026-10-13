@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # 1. Build the web panel
-FROM node:22-alpine AS web
+FROM node:26-alpine AS web
 WORKDIR /build
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
