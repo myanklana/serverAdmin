@@ -1,6 +1,7 @@
 package adminServer.mvp.security;
 
 import org.springframework.context.annotation.Bean;
+import org.springframework.http.HttpMethod;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -35,8 +36,10 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/actuator/health", "/register", "/login", "/api/agent/**", "/swagger-ui/**",
-                                "/v3/api-docs/**", "/swagger-ui.html", "/ws", "/ws/**")
+                        .requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**", "/favicon.*")
+                        .permitAll()
+                        .requestMatchers("/actuator/health", "/register", "/login", "/setup-status", "/api/agent/**",
+                                "/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html", "/ws", "/ws/**")
                         .permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(exceptions -> exceptions.authenticationEntryPoint(authenticationEntryPoint))

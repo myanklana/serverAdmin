@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -21,6 +22,8 @@ import oshi.software.os.OSFileStore;
 
 public final class AgentApplication {
     private static final ObjectMapper JSON = new ObjectMapper().registerModule(new JavaTimeModule());
+    static final String VERSION = Objects.requireNonNullElse(
+            AgentApplication.class.getPackage().getImplementationVersion(), "dev");
     private static volatile long[] previousCpuTicks;
     private static volatile NetworkSample previousNetworkSample;
 
@@ -34,11 +37,26 @@ public final class AgentApplication {
             throw new IllegalArgumentException("config.json exige server e token com ao menos 32 caracteres");
         }
 
+        warnIfInsecure(config.server());
         SystemInfo system = new SystemInfo();
         HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
         var executor = Executors.newSingleThreadScheduledExecutor();
         executor.scheduleAtFixedRate(() -> send(client, config, system), 0, 5, TimeUnit.SECONDS);
-        Runtime.getRuntime().addShutdownHook(new Thread(executor::shutdown));
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            executor.shutdown();
+            System.err.println("Agente encerrado.");
+        }));
+        System.err.println("Agente " + VERSION + " enviando métricas para " + config.server());
+    }
+
+    static void warnIfInsecure(String server) {
+        URI uri = URI.create(server);
+        String host = uri.getHost() == null ? "" : uri.getHost();
+        boolean local = host.equals("localhost") || host.equals("127.0.0.1") || host.equals("::1");
+        if ("http".equalsIgnoreCase(uri.getScheme()) && !local) {
+            System.err.println("AVISO: a API usa HTTP sem TLS; o token do agente trafega sem criptografia. "
+                    + "Use HTTPS fora de redes confiáveis.");
+        }
     }
 
     private static void send(HttpClient client, Config config, SystemInfo system) {
@@ -48,6 +66,7 @@ public final class AgentApplication {
                     .newBuilder(URI.create(config.server().replaceAll("/$", "") + "/api/agent/metrics"))
                     .header("Content-Type", "application/json")
                     .header("X-Agent-Token", config.token())
+                    .header("User-Agent", "server-manager-agent/" + VERSION)
                     .POST(HttpRequest.BodyPublishers.ofString(JSON.writeValueAsString(payload)))
                     .timeout(Duration.ofSeconds(15))
                     .build();

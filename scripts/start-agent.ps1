@@ -17,5 +17,6 @@ $configPath = Join-Path (Split-Path -Parent $JarPath) 'config.json'
 $configJson = @{ server = $ApiUrl.TrimEnd('/'); token = $Token } | ConvertTo-Json
 $utf8WithoutBom = New-Object System.Text.UTF8Encoding($false)
 [System.IO.File]::WriteAllText($configPath, $configJson, $utf8WithoutBom)
+& icacls $configPath /inheritance:r /grant:r "$($env:USERNAME):(R,W)" | Out-Null
 Write-Host "Enviando metricas para $($ApiUrl.TrimEnd('/')) a cada 5 segundos. Use Ctrl+C para parar." -ForegroundColor Green
 & java -jar $JarPath $configPath

@@ -4,6 +4,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -42,6 +43,18 @@ public class ApiExceptionHandler {
     @ExceptionHandler(adminServer.mvp.auth.InvalidCredentialsException.class)
     public ResponseEntity<ProblemDetail> unauthorized(HttpServletRequest request) {
         return response(HttpStatus.UNAUTHORIZED, "Não autorizado", "Credenciais inválidas", request);
+    }
+
+    @ExceptionHandler(SecurityException.class)
+    public ResponseEntity<ProblemDetail> agentUnauthorized(HttpServletRequest request) {
+        return response(HttpStatus.UNAUTHORIZED, "Não autorizado", "Token de agente inválido", request);
+    }
+
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ResponseEntity<ProblemDetail> missingHeader(MissingRequestHeaderException exception,
+            HttpServletRequest request) {
+        return response(HttpStatus.BAD_REQUEST, "Requisição inválida",
+                "Cabeçalho obrigatório ausente: " + exception.getHeaderName(), request);
     }
 
     @ExceptionHandler(adminServer.mvp.auth.TooManyRequestsException.class)

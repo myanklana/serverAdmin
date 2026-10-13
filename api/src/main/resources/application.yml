@@ -1,11 +1,21 @@
 app:
+  data-dir: ${APP_DATA_DIR:./data}
   jwt:
-    secret: ${APP_JWT_SECRET}
+    # Leave empty to generate a random key stored in <data-dir>/jwt-secret.
+    secret: ${APP_JWT_SECRET:}
     issuer: ${APP_JWT_ISSUER:server-manager-api}
     audience: ${APP_JWT_AUDIENCE:server-manager-web}
     expiration-minutes: ${APP_JWT_EXPIRATION_MINUTES:120}
   cors:
-    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173}
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:8080}
+  registration:
+    # The first account is always allowed; set to true to let anyone else sign up.
+    open: ${APP_REGISTRATION_OPEN:false}
+  metrics:
+    retention-days: ${APP_METRICS_RETENTION_DAYS:30}
+server:
+  port: ${PORT:8080}
+  shutdown: graceful
 management:
   endpoints:
     web:

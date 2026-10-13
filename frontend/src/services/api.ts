@@ -6,14 +6,16 @@ const MAX_HISTORY_PAGES = 25;
 const MAX_CHART_POINTS = 700;
 export type Server = { id: string; name: string; hostname: string; ip: string; port: number; status: 'PENDING' | 'ONLINE' | 'OFFLINE'; lastSeen: string | null; latestMetrics: Metrics | null };
 export type CreatedServer = { server: Server; agentToken: string };
-const baseUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:8080';
-export const apiUrl = baseUrl;
+// Empty by default: the panel is served by the API itself (or proxied by Vite in development).
+const baseUrl = import.meta.env.VITE_API_URL ?? '';
+export const apiUrl = baseUrl || window.location.origin;
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`${baseUrl}${path}`, { ...init, headers: { 'Content-Type': 'application/json', ...init.headers } });
-  if (!response.ok) { const body = await response.json().catch(() => null); throw new Error(body?.message ?? 'Erro na requisição.'); }
+  if (!response.ok) { const body = await response.json().catch(() => null); throw new Error(body?.detail ?? body?.message ?? (response.status === 403 ? 'Operação não permitida.' : 'Erro na requisição.')); }
   return response.status === 204 ? undefined as T : response.json() as Promise<T>;
 }
 export const register = (credentials: { username: string; password: string }) => request('/register', { method: 'POST', body: JSON.stringify(credentials) });
+export const getSetupStatus = () => request<{ registrationOpen: boolean; firstUser: boolean }>('/setup-status');
 export const login = (credentials: { username: string; password: string }) => request<{ accessToken: string }>('/login', { method: 'POST', body: JSON.stringify(credentials) });
 export const listServers = (token: string) => request<Server[]>('/api/servers', { headers: { Authorization: `Bearer ${token}` } });
 export const createServer = (token: string, server: { name: string; ip: string; port: number }) => request<CreatedServer>('/api/servers', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(server) });

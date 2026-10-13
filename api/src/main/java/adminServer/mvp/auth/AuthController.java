@@ -24,9 +24,12 @@ public class AuthController {
     private final JwtService jwtService;
     private final AuthService authService;
     private final AuthRateLimitService rateLimits;
+    private final boolean registrationOpen;
 
     public AuthController(UserRepository users, PasswordEncoder passwordEncoder, JwtService jwtService,
-            AuthService authService, AuthRateLimitService rateLimits) {
+            AuthService authService, AuthRateLimitService rateLimits,
+            @org.springframework.beans.factory.annotation.Value("${app.registration.open:false}") boolean registrationOpen) {
+        this.registrationOpen = registrationOpen;
         this.users = users;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -37,12 +40,20 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<UserResponse> register(@Valid @RequestBody Credentials request, HttpServletRequest httpRequest) {
         rateLimits.consumeRegistrationAttempt(httpRequest.getRemoteAddr());
+        if (!registrationAllowed()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         String username = normalizeUsername(request.username());
         if (users.existsByUsername(username)) {
             return ResponseEntity.status(HttpStatus.CONFLICT).build();
         }
         User user = users.save(new User(username, passwordEncoder.encode(request.password())));
         return ResponseEntity.status(HttpStatus.CREATED).body(UserResponse.from(user));
+    }
+
+    @GetMapping("/setup-status")
+    public SetupStatus setupStatus() {
+        return new SetupStatus(registrationAllowed(), users.count() == 0);
     }
 
     @PostMapping("/login")
@@ -61,6 +72,14 @@ public class AuthController {
     public UserResponse me(Authentication authentication) {
         User user = users.findById(((AuthenticatedUser) authentication.getPrincipal()).id()).orElseThrow();
         return UserResponse.from(user);
+    }
+
+    /** The first account is always allowed; later ones only when registration is explicitly open. */
+    private boolean registrationAllowed() {
+        return registrationOpen || users.count() == 0;
+    }
+
+    public record SetupStatus(boolean registrationOpen, boolean firstUser) {
     }
 
     public record Credentials(@NotBlank @Size(min = 3, max = 80) String username,

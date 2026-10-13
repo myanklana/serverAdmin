@@ -10,7 +10,7 @@ Navegador ── HTTP/JSON ──> Frontend React ── HTTP/JSON + JWT ──>
 
 ## Componentes
 
-- **Frontend:** autenticação, cadastro de servidores e visualização das últimas métricas.
+- **Frontend:** painel React; em produção é servido pela própria API (um único container e porta).
 - **API:** autenticação JWT, autorização por usuário, cadastro de servidores e recebimento de métricas.
 - **PostgreSQL:** usuários, servidores gerenciados e histórico de métricas; o esquema é versionado por migrations.
 - **Agente:** processo Java instalado no servidor monitorado. Coleta CPU, memória, disco, rede e informações do sistema e as envia à API.
@@ -22,6 +22,10 @@ Navegador ── HTTP/JSON ──> Frontend React ── HTTP/JSON + JWT ──>
 - O agente somente inicia conexões de saída para a API. Não há porta de administração exposta nos servidores monitorados.
 - Para uso fora de uma rede confiável, a API deve ser publicada com HTTPS. O banco de dados permanece interno.
 
+## Retenção e status
+
+Métricas anteriores a `APP_METRICS_RETENTION_DAYS` são removidas por uma tarefa agendada. Um servidor é exibido como offline após 15 s sem métricas.
+
 ## Execução
 
-O ambiente de desenvolvimento usa PostgreSQL em Docker, API na porta `8080` e frontend na porta `5173`. Scripts em `scripts/` iniciam o ambiente e geram um JAR portátil do agente para servidores externos.
+Produção local: `docker compose up -d --build` (API + painel + PostgreSQL com volumes). Desenvolvimento: `scripts/start-dev.sh` (ou `.ps1`). Veja [instalacao.md](instalacao.md).

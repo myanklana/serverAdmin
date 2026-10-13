@@ -1,27 +1,19 @@
 # API
 
-API Spring Boot do Server Manager.
-
-Os módulos de negócio ficam no pacote `adminServer.mvp`:
-
-```text
-auth/       users/      servers/    metrics/    websocket/
-alerts/     commands/   audit/      docker/     terminal/
-config/     security/
-```
-
-As migrações de banco de dados devem ser criadas em `src/main/resources/db/migration/`.
-
-## Fases 1 a 3: endpoints disponíveis
+API Spring Boot do Server Manager. Em produção também serve o painel (arquivos estáticos).
 
 | Método | Rota | Autenticação |
 | --- | --- | --- |
-| `POST` | `/register` | pública |
+| `GET` | `/setup-status` | pública |
+| `POST` | `/register` | pública (somente a primeira conta, ou se `APP_REGISTRATION_OPEN=true`) |
 | `POST` | `/login` | pública |
 | `GET` | `/me` | Bearer JWT |
-| `GET` | `/api/servers` | Bearer JWT |
-| `POST` | `/api/servers` | Bearer JWT |
-| `GET` | `/api/servers/{id}` | Bearer JWT |
-| `DELETE` | `/api/servers/{id}` | Bearer JWT |
+| `GET/POST` | `/api/servers` | Bearer JWT |
+| `GET/PATCH/DELETE` | `/api/servers/{id}` | Bearer JWT |
+| `POST` | `/api/servers/{id}/rotate-token` | Bearer JWT |
+| `GET` | `/api/servers/{id}/metrics` | Bearer JWT |
+| `POST` | `/api/agent/metrics` | `X-Agent-Token` |
+| `WS` | `/ws` (STOMP, `/user/queue/metrics`) | Bearer JWT |
 
-O token de agente nunca é devolvido pela API: somente o hash BCrypt é persistido.
+Swagger (`/swagger-ui.html`) fica ativo apenas no perfil `dev`. Migrations em
+`src/main/resources/db/migration`. O token de agente nunca é devolvido depois da criação.

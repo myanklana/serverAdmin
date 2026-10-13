@@ -2,7 +2,7 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useMetricStream } from './hooks/useMetricStream';
 import { MetricChart } from './components/MetricChart';
-import { apiUrl, createServer, getMetricHistory, HistoricalMetric, listServers, login, register, Server } from './services/api';
+import { apiUrl, createServer, getMetricHistory, getSetupStatus, HistoricalMetric, listServers, login, register, Server } from './services/api';
 import type { RealtimeMetric } from './types/RealTimeMetric';
 import './styles.css';
 
@@ -12,6 +12,8 @@ function App() {
   const serversRef = useRef<Server[]>([]);
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [message, setMessage] = useState('');
+  const [registrationOpen, setRegistrationOpen] = useState(true);
+  const [firstUser, setFirstUser] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedServerId, setSelectedServerId] = useState('');
   const [periodDays, setPeriodDays] = useState(1);
@@ -21,6 +23,13 @@ function App() {
   const [agentSetup, setAgentSetup] = useState<{ serverName: string; token: string } | null>(null);
 
   useEffect(() => { serversRef.current = servers; }, [servers]);
+  useEffect(() => {
+    getSetupStatus().then(status => {
+      setRegistrationOpen(status.registrationOpen);
+      setFirstUser(status.firstUser);
+      if (status.firstUser) setMode('register');
+    }).catch(() => undefined);
+  }, []);
   useEffect(() => {
     if (!selectedServerId && servers.length > 0) setSelectedServerId(servers[0].id);
     if (selectedServerId && !servers.some(server => server.id === selectedServerId)) setSelectedServerId(servers[0]?.id ?? '');
@@ -96,6 +105,7 @@ function App() {
       if (mode === 'register') {
         await register(credentials);
         setMode('login');
+        await getSetupStatus().then(status => { setRegistrationOpen(status.registrationOpen); setFirstUser(status.firstUser); });
         setMessage('Conta criada. Faça login.');
       } else {
         const session = await login(credentials);
@@ -126,12 +136,13 @@ function App() {
 
   if (!token) return <main className="auth">
     <h1>Server Manager</h1>
+    {firstUser && <p>Primeiro acesso: crie a conta de administrador.</p>}
     <form onSubmit={authenticate}>
       <label>Usuário<input name="username" minLength={3} required /></label>
       <label>Senha<input name="password" type="password" minLength={8} required /></label>
       <button disabled={loading}>{loading ? 'Aguarde…' : mode === 'login' ? 'Entrar' : 'Criar conta'}</button>
     </form>
-    <button className="link" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>{mode === 'login' ? 'Criar conta' : 'Entrar'}</button>
+    {registrationOpen && !firstUser && <button className="link" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>{mode === 'login' ? 'Criar conta' : 'Entrar'}</button>}
     {message && <p role="alert">{message}</p>}
   </main>;
 

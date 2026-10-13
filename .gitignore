@@ -36,4 +36,9 @@ frontend/dist/
 *.tsbuildinfo
 dist/
 config.json
+agent/config.json
 roteiro.md
+
+.env
+data/
+!.env.example

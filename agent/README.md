@@ -1,6 +1,6 @@
 # Agente
 
-Aplicação Java instalada em cada servidor monitorado. Ela coleta métricas, envia dados à API e recebe somente comandos autorizados.
+Aplicação Java instalada em cada servidor monitorado. Ela coleta métricas e as envia à API; só faz conexões de saída.
 
 ## Executar
 
@@ -28,3 +28,5 @@ java -jar target/agent-0.0.1-SNAPSHOT.jar config.json
 ```
 
 O agente envia métricas para a API a cada cinco segundos usando o token associado ao servidor.
+
+No Linux, `scripts/install-agent-linux.sh` instala o agente como serviço systemd. Use sempre HTTPS fora de redes confiáveis: o agente avisa quando a URL é HTTP.

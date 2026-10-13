@@ -2,7 +2,9 @@ package adminServer.mvp.server;
 
 import java.net.InetAddress;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import adminServer.mvp.metrics.Metric;
@@ -49,7 +51,13 @@ public class ServerController {
     @GetMapping
     public List<ServerResponse> list(Authentication authentication) {
         User user = currentUser(authentication);
-        return servers.findAllByOwnerIdOrderByNameAsc(user.getId()).stream().map(this::toResponse).toList();
+        List<ManagedServer> owned = servers.findAllByOwnerIdOrderByNameAsc(user.getId());
+        Map<UUID, Metric> latest = new HashMap<>();
+        if (!owned.isEmpty()) {
+            metrics.findLatestForServers(owned.stream().map(ManagedServer::getId).toList())
+                    .forEach(metric -> latest.put(metric.getServer().getId(), metric));
+        }
+        return owned.stream().map(server -> toResponse(server, latest.get(server.getId()))).toList();
     }
 
     @PostMapping
@@ -91,11 +99,11 @@ public class ServerController {
     }
 
     private ServerResponse toResponse(ManagedServer server) {
-        Metric metric = metrics.findFirstByServerIdOrderByCollectedAtDesc(server.getId()).orElse(null);
-        ServerStatus status = server.getLastSeen() != null
-                && server.getLastSeen().isBefore(Instant.now().minusSeconds(15))
-                        ? ServerStatus.OFFLINE
-                        : server.getStatus();
+        return toResponse(server, metrics.findFirstByServerIdOrderByCollectedAtDesc(server.getId()).orElse(null));
+    }
+
+    private ServerResponse toResponse(ManagedServer server, Metric metric) {
+        ServerStatus status = server.effectiveStatus(Instant.now());
         return new ServerResponse(server.getId(), server.getName(), server.getHostname(), server.getIp(),
                 server.getPort(), status, server.getLastSeen(), metric == null ? null : MetricResponse.from(metric));
     }

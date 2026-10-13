@@ -18,7 +18,7 @@ export function useMetricStream(
 
     setStatus('connecting');
     const client = new Client({
-      brokerURL: import.meta.env.VITE_WS_URL ?? 'ws://localhost:8080/ws',
+      brokerURL: import.meta.env.VITE_WS_URL ?? `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws`,
       connectHeaders: { Authorization: `Bearer ${token}` },
       reconnectDelay: 5_000,
       heartbeatIncoming: 10_000,

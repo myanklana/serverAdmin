@@ -13,3 +13,5 @@ app:
     issuer: server-manager-api
     audience: server-manager-web
     expiration-minutes: 120
+  registration:
+    open: true

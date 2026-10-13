@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Date;
 import java.util.UUID;
@@ -21,9 +22,13 @@ public class JwtService {
     private final String audience;
     private final long expirationMinutes;
 
-    public JwtService(@Value("${app.jwt.secret}") String secret, @Value("${app.jwt.issuer}") String issuer,
+    public JwtService(@Value("${app.jwt.secret:}") String configuredSecret,
+            @Value("${app.data-dir:./data}") String dataDir, @Value("${app.jwt.issuer}") String issuer,
             @Value("${app.jwt.audience}") String audience,
             @Value("${app.jwt.expiration-minutes}") long expirationMinutes) {
+        String secret = configuredSecret == null || configuredSecret.isBlank()
+                ? JwtSecretStore.loadOrCreate(Path.of(dataDir, "jwt-secret"))
+                : configuredSecret;
         if (secret == null || secret.getBytes(StandardCharsets.UTF_8).length < 32)
             throw new IllegalArgumentException("APP_JWT_SECRET deve ter ao menos 32 bytes");
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));

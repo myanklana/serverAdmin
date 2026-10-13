@@ -1,4 +1,4 @@
 {
-  "server": "http://localhost:8080",
-  "token": "3d83b93ec72f4e42a84919ce5c0433d5"
+  "server": "https://seu-painel.exemplo.com",
+  "token": "TOKEN_GERADO_NO_PAINEL"
 }

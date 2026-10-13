@@ -88,7 +88,7 @@ public class ServerService {
 
     private ServerStatus calculateStatus(ManagedServer server) {
 
-        return server.getStatus();
+        return server.effectiveStatus(java.time.Instant.now());
 
     }
 

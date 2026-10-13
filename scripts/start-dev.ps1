@@ -40,7 +40,7 @@ if ([string]::IsNullOrWhiteSpace($JwtSecret)) {
 
 Push-Location $root
 try {
-    docker compose up -d
+    docker compose -f docker-compose.dev.yml up -d
 
     if (-not (Test-Path (Join-Path $root 'frontend/node_modules'))) {
         Push-Location (Join-Path $root 'frontend')

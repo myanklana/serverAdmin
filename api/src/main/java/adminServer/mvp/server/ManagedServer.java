@@ -10,6 +10,8 @@ import java.util.UUID;
 @Table(name = "servers", uniqueConstraints = @UniqueConstraint(name = "uk_server_owner_name", columnNames = {
         "owner_id", "name" }))
 public class ManagedServer {
+    public static final java.time.Duration OFFLINE_AFTER = java.time.Duration.ofSeconds(15);
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
@@ -94,6 +96,11 @@ public class ManagedServer {
     public void replaceToken(String tokenHash, String tokenLookupHash) {
         this.tokenHash = tokenHash;
         this.tokenLookupHash = tokenLookupHash;
+    }
+
+    /** Servers that stopped reporting are shown as offline even though the stored status is ONLINE. */
+    public ServerStatus effectiveStatus(Instant now) {
+        return lastSeen != null && lastSeen.isBefore(now.minus(OFFLINE_AFTER)) ? ServerStatus.OFFLINE : status;
     }
 
     public void markOnline(Instant seenAt, String reportedHostname) {
