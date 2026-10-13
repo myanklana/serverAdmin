@@ -9,14 +9,14 @@ COPY frontend/ ./
 RUN npm run build
 
 # 2. Build the API, bundling the panel as static resources
-FROM eclipse-temurin:21-jdk-alpine AS api
+FROM eclipse-temurin:25-jdk-alpine AS api
 WORKDIR /build
 COPY api/ ./
 COPY --from=web /build/dist/ src/main/resources/static/
 RUN sh mvnw -B -q -DskipTests package && cp target/mvp-*.jar /build/app.jar
 
 # 3. Runtime image
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 RUN addgroup -S app && adduser -S app -G app && mkdir /data && chown app:app /data
 USER app
 WORKDIR /app
