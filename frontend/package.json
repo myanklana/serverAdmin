@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build"
   },
   "dependencies": {
-    "@stomp/stompjs": "^7.3.0",
+    "@stomp/stompjs": "^7.5.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "vite": "8.2.0"
